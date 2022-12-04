@@ -8,6 +8,7 @@ edition = "2021"
 [[bin]]
 name = "first-day"
 path = "src/first-day.rs"
+
 [[bin]]
 name = "second-day"
 path = "src/second-day.rs"
@@ -15,5 +16,10 @@ path = "src/second-day.rs"
 [[bin]]
 name = "third-day"
 path = "src/third-day.rs"
+
+[[bin]]
+name = "fourth-day"
+path = "src/fourth-day.rs"
+
 [dependencies]
 regex = "1.7.0"
