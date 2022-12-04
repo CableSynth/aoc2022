@@ -45,7 +45,8 @@ fn parse_line_1(l: &str) -> u32 {
         .split("-")
         .map(|f| f.parse::<u32>().unwrap())
         .collect();
-    if first_section.first() <= second_section.last() && second_section.first() <= first_section.last()
+    if first_section.first() <= second_section.last()
+        && second_section.first() <= first_section.last()
     {
         return 1;
     }
