@@ -1,6 +1,10 @@
 const TEST_STR: &str = include_str!("../test_data/first_test_1.txt");
-fn read() -> Vec<u32>{
-    TEST_STR.trim().split("\n\n").map(parse_elf_calories).collect()
+fn read() -> Vec<u32> {
+    TEST_STR
+        .trim()
+        .split("\n\n")
+        .map(parse_elf_calories)
+        .collect()
 }
 
 fn parse_elf_calories(value: &str) -> u32 {
@@ -24,5 +28,4 @@ fn main() {
     }
 
     println!("{:?}", top_3.iter().sum::<u32>());
-
 }
