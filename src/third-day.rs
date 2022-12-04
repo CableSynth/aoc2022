@@ -5,7 +5,6 @@ fn read() -> u32 {
 fn read_2() -> u32 {
     let multi_line: Vec<&str> = TEST_STR.trim().lines().collect();
     parse_lines(multi_line)
-    
 }
 fn parse_line(l: &str) -> u32 {
     let (first_half, second_half) = l.trim().split_at(l.len() / 2);
