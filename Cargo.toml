@@ -24,5 +24,8 @@ path = "src/fourth-day.rs"
 [[bin]]
 name = "fifth-day"
 path = "src/fifth-day.rs"
+[[bin]]
+name = "sixth-day"
+path = "src/sixth-day.rs"
 [dependencies]
 regex = "1.7.0"

@@ -51,7 +51,6 @@ fn parse_stack(stack: &str) -> Vec<Vec<char>> {
         split_row(b, &mut better_box, &points)
     }
 
-
     let better_box = better_box
         .into_iter()
         .map(|f| {
