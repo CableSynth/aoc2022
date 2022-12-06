@@ -1,5 +1,3 @@
-use std::ops::RangeBounds;
-
 const TEST_STR: &str = include_str!("../test_data/fourth_day.txt");
 fn read() -> u32 {
     TEST_STR.trim().lines().map(parse_line).sum::<u32>()
