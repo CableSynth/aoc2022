@@ -1,130 +1,100 @@
-use std::borrow::BorrowMut;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 
 const PROMPT_STR: &str = include_str!("../test_data/seventh_day.txt");
-const TEST_STR: &str = include_str!("../test_data/test.txt");
-
-struct TreeNode<'a> {
-    pub name: &'a str,
-    pub size: Option<u32>,
-    pub children: Option<HashMap<&'a str, Rc<RefCell<TreeNode<'a>>>>>,
-    pub parent: Option<Rc<RefCell<TreeNode<'a>>>>,
-}
-
-impl<'a> TreeNode<'a> {
-    pub fn new() -> TreeNode<'a> {
-        TreeNode {
-            name: "/",
-            size: None,
-            children: None,
-            parent: None,
-        }
-    }
-
-    pub fn cd(self, location: &'a str) -> Rc<RefCell<TreeNode>>{
-        match location {
-            "/" => {
-                if self.parent.is_none() {
-                    return Rc::new(self.into())
-                } else {
-                    self.cd(location)
-                }
-            },
-            ".." => {
-                if self.parent.is_none() {
-                    return Rc::new(self.into())
-                } else {
-                    return self.parent.unwrap()
-                }
-            },
-            _ => {
-               return self.children.unwrap().get(location).unwrap().clone()
-            }
-        }
-    }
-
-    pub fn add_child(&'a mut self, k: &'a str, v: TreeNode<'a>){
-        self.children.as_mut().unwrap().insert(k, Rc::new(RefCell::new(v))).unwrap();
-    }
-}
-
-fn parse_file_cmd(s: Vec<&str>) -> Option<FileLine> {
-    match s[0] {
-        "cd" => Some(FileLine {
-            file_cmd: FileCommand::ChangeDirectory,
-            file_name: s[1],
-            value: None,
-        }),
-        "ls" => Some(FileLine {
-            file_cmd: FileCommand::ListDirectory,
-            file_name: ".",
-            value: None,
-        }),
-        "dir" => Some(FileLine {
-            file_cmd: FileCommand::DirectoryName,
-            file_name: s[1],
-            value: None,
-        }),
-        _ => Some(FileLine {
-            file_cmd: FileCommand::FileName,
-            file_name: s[1],
-            value: s[0].to_string().parse::<u32>().ok(),
-        }),
-    }
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-enum FileCommand {
-    ChangeDirectory,
-    ListDirectory,
-    FileName,
-    DirectoryName,
-}
 
 #[derive(Debug)]
-struct FileLine<'a> {
-    file_cmd: FileCommand,
-    file_name: &'a str,
-    value: Option<u32>,
+struct Tree {
+    size: u64,
+    children: HashMap<String, Tree>,
 }
 
-fn parse_line(s: &str) -> FileLine {
-    let parts: Vec<_> = s.trim().split_whitespace().collect();
-    println!("{:?}", parts);
-    if parts.iter().next().unwrap().to_owned() == "$" {
-        parse_file_cmd(parts[1..].to_vec()).unwrap()
-    } else {
-        parse_file_cmd(parts).unwrap()
-    }
-}
-
-fn main() {
-    let s: Vec<_> = TEST_STR.trim().lines().map(parse_line).collect();
-    let mut tree = TreeNode::<'_>::new();
-    let cwd = *TreeNode::<'_>::cd(tree, "/");
-    for l in s {
-        let cmd = l.file_cmd;
-        match cmd {
-            FileCommand::ChangeDirectory => {
-                let location = l.file_name;
-                cwd = *TreeNode::<'_>::cd(cwd, location);
-
-            }
-            FileCommand::ListDirectory => (),
-            FileCommand::DirectoryName | FileCommand::FileName => {
-                let name = l.file_name;
-                let new_node = TreeNode {
-                    name,
-                    size: l.value.clone(),
-                    children: Some(HashMap::new()),
-                    parent: Some(Rc::new(cwd)),
-                };
-                cwd = cwd.add_child(name, new_node).clone();
-            }
+impl Tree {
+    fn new(size: u64) -> Tree {
+        Tree {
+            size: size,
+            children: HashMap::new(),
         }
     }
 
-    dbg!(cwd);
+    fn get_size(&self) -> u64 {
+        self.size
+            + self
+                .children
+                .values()
+                .map(|tree| tree.get_size())
+                .sum::<u64>()
+    }
+
+    fn traverse_and_insert(&mut self, path: &[String], key: String, val: u64) {
+        if path.is_empty() {
+            self.children.insert(key, Tree::new(val));
+        } else {
+            self.children
+                .get_mut(path.first().unwrap())
+                .unwrap()
+                .traverse_and_insert(&path[1..], key, val);
+        }
+    }
+
+    fn get_folder_sizes(&self) -> Vec<u64> {
+        let mut out: Vec<u64> = self
+            .children
+            .values()
+            .filter(|x| x.size == 0)
+            .map(|x| x.get_folder_sizes())
+            .flatten()
+            .collect();
+        out.push(self.get_size());
+        out
+    }
+}
+
+fn parse_input(filename: &str) -> Tree {
+    // Parse input file into a tree structure. Return the tree root.
+    let lines: Vec<_> = filename
+        .lines()
+        .map(|x| x.to_string())
+        .collect();
+
+    let mut root: Tree = Tree::new(0);
+    let mut path: Vec<String> = Vec::new();
+    for line in lines.iter().skip(1) {
+        match line.rsplit_once(' ') {
+            Some(("$ cd", "..")) => {
+                path.pop();
+            }
+            Some(("$ cd", name)) => {
+                path.push(name.to_string());
+            }
+            Some(("$", "ls")) => (),
+            Some(("dir", name)) => {
+                root.traverse_and_insert(&path, name.to_string(), 0);
+            }
+            Some((size, name)) => {
+                root.traverse_and_insert(&path, name.to_string(), size.parse().unwrap());
+            }
+            _ => (),
+        }
+    }
+    root
+}
+
+fn solve() -> (u64, u64) {
+    let root = parse_input(PROMPT_STR);
+    let folder_sizes = root.get_folder_sizes();
+
+    let part1 = folder_sizes.iter().filter(|&&x| x <= 100000).sum();
+
+    let min_folder_size = 30000000 - (70000000 - root.get_size());
+    let part2 = *folder_sizes
+        .iter()
+        .filter(|&&x| x >= min_folder_size)
+        .min()
+        .unwrap();
+
+    (part1, part2)
+}
+
+fn main () {
+    println!("{:?}", solve())
 }
