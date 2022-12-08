@@ -32,6 +32,11 @@ path = "src/sixth-day.rs"
 [[bin]]
 name = "seventh-day"
 path = "src/seventh-day.rs"
+[[bin]]
+name = "eigth-day"
+path = "src/eigth-day.rs"
 
 [dependencies]
 regex = "1.7.0"
+grid = "0.9.0"
+itertools = "0.10.5"
