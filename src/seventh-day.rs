@@ -6,120 +6,15 @@ use std::rc::Rc;
 const PROMPT_STR: &str = include_str!("../test_data/seventh_day.txt");
 const TEST_STR: &str = include_str!("../test_data/test.txt");
 
-#[derive(Debug)]
-struct Node<T>
-where
-    T: PartialEq,
-{
-    idx: usize,
-    val: T,
-    parent: Option<usize>,
-    children: Vec<usize>,
-}
-
-impl<T> Node<T>
-where
-    T: PartialEq,
-{
-    fn new(idx: usize, val: T) -> Self {
-        Self {
-            idx,
-            val,
-            parent: None,
-            children: vec![],
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-struct ArenaTree<T>
-where
-    T: PartialEq,
-{
-    arena: Vec<Node<T>>,
-}
-
-impl<T> ArenaTree<T>
-where
-    T: PartialEq,
-{
-    fn node(&mut self, val: T) -> usize {
-        //first see if it exists
-        for node in &self.arena {
-            if node.val == val {
-                return node.idx;
-            }
-        }
-        // Otherwise, add new node
-        let idx = self.arena.len();
-        self.arena.push(Node::new(idx, val));
-        idx
-    }
-    fn size(&self) -> usize {
-        self.arena.len()
-    }
-    fn edges(&self) -> usize {
-        self.arena
-            .iter()
-            .fold(0, |acc, node| acc + node.children.len())
-    }
-
-    fn depth(&self, idx: usize) -> usize {
-        match self.arena[idx].parent {
-            Some(id) => 1 + self.depth(id),
-            None => 0,
-        }
-    }
-    fn depth_to_target(&self, idx: usize, target: &T) -> Option<usize> {
-        // are we here?  If so, Some(0)
-        if target == &self.arena[idx].val {
-            return Some(0);
-        }
-
-        // If not, try all children
-        for p in &self.arena[idx].children {
-            if let Some(x) = self.depth_to_target(*p, &target) {
-                return Some(1 + x);
-            }
-        }
-        // If it cant be found, return None
-        None
-    }
-    fn distance_between(&mut self, from: T, target: T) -> usize {
-        // If it's not in the tree, this will add a new unconnected node
-        // the final function will still return None
-        let start_node = self.node(from);
-        let mut ret = 0;
-        // Start traversal
-        let mut trav = &self.arena[start_node];
-        // Explore all children, then hop up one
-        while let Some(inner) = trav.parent {
-            if let Some(x) = self.depth_to_target(inner, &target) {
-                ret += x;
-                break;
-            }
-            trav = &self.arena[inner];
-            ret += 1;
-        }
-        // don't go all the way to target, just orbit
-        if ret > 0 {
-            ret - 1
-        } else {
-            ret
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
 struct TreeNode<'a> {
     pub name: &'a str,
     pub size: Option<u32>,
-    pub children: Option<HashMap<&'a str, TreeNode<'a>>>,
-    pub parent: Option<Box<&'a TreeNode<'a>>>,
+    pub children: Option<HashMap<&'a str, Rc<RefCell<TreeNode<'a>>>>>,
+    pub parent: Option<Rc<RefCell<TreeNode<'a>>>>,
 }
 
 impl<'a> TreeNode<'a> {
-    pub fn new() -> TreeNode<'static> {
+    pub fn new() -> TreeNode<'a> {
         TreeNode {
             name: "/",
             size: None,
@@ -128,28 +23,30 @@ impl<'a> TreeNode<'a> {
         }
     }
 
-    pub fn cd(tn: &'a TreeNode<'a>, s: &str) -> Option<&'a TreeNode<'a>> {
-        if s == ".." {
-            if tn.parent.is_some() {
-                return Some(&tn.parent.to_owned().unwrap());
-            } else {
-                return Some(tn);
+    pub fn cd(self, location: &'a str) -> Rc<RefCell<TreeNode>>{
+        match location {
+            "/" => {
+                if self.parent.is_none() {
+                    return Rc::new(self.into())
+                } else {
+                    self.cd(location)
+                }
+            },
+            ".." => {
+                if self.parent.is_none() {
+                    return Rc::new(self.into())
+                } else {
+                    return self.parent.unwrap()
+                }
+            },
+            _ => {
+               return self.children.unwrap().get(location).unwrap().clone()
             }
-        }
-        if s == "/" {
-            if tn.parent.is_none() {
-                return Some(tn);
-            } else {
-                TreeNode::<'_>::cd(tn, s)
-            }
-        } else {
-            Some(&tn.children.as_ref().unwrap().get(s).expect(s))
         }
     }
 
-    pub fn add_child(&'a mut self, k: &'a str, v: TreeNode<'a>)  -> &'a mut TreeNode<'a>{
-        self.children.as_mut().unwrap().insert(k, v).unwrap();
-        self
+    pub fn add_child(&'a mut self, k: &'a str, v: TreeNode<'a>){
+        self.children.as_mut().unwrap().insert(k, Rc::new(RefCell::new(v))).unwrap();
     }
 }
 
@@ -206,13 +103,13 @@ fn parse_line(s: &str) -> FileLine {
 fn main() {
     let s: Vec<_> = TEST_STR.trim().lines().map(parse_line).collect();
     let mut tree = TreeNode::<'_>::new();
-    let cwd = *TreeNode::<'_>::cd(&mut tree, "/").unwrap();
+    let cwd = *TreeNode::<'_>::cd(tree, "/");
     for l in s {
         let cmd = l.file_cmd;
         match cmd {
             FileCommand::ChangeDirectory => {
                 let location = l.file_name;
-                cwd = *TreeNode::<'_>::cd(&cwd, location).expect(&location.clone());
+                cwd = *TreeNode::<'_>::cd(cwd, location);
 
             }
             FileCommand::ListDirectory => (),
@@ -222,7 +119,7 @@ fn main() {
                     name,
                     size: l.value.clone(),
                     children: Some(HashMap::new()),
-                    parent: Some(Box::new(&cwd)),
+                    parent: Some(Rc::new(cwd)),
                 };
                 cwd = cwd.add_child(name, new_node).clone();
             }
