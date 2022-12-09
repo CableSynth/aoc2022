@@ -51,10 +51,7 @@ impl Tree {
 
 fn parse_input(filename: &str) -> Tree {
     // Parse input file into a tree structure. Return the tree root.
-    let lines: Vec<_> = filename
-        .lines()
-        .map(|x| x.to_string())
-        .collect();
+    let lines: Vec<_> = filename.lines().map(|x| x.to_string()).collect();
 
     let mut root: Tree = Tree::new(0);
     let mut path: Vec<String> = Vec::new();
@@ -95,6 +92,6 @@ fn solve() -> (u64, u64) {
     (part1, part2)
 }
 
-fn main () {
+fn main() {
     println!("{:?}", solve())
 }
