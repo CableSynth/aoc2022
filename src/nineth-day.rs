@@ -35,12 +35,12 @@ fn main() {
             let dist = (new_head.0 - tail.0, new_head.1 - tail.1);
             if dist != (0, 0) {
                 let dist_sqr = dist.0.pow(2) + dist.1.pow(2);
-                if dist_sqr == 5 || dist_sqr == 4{
-                tail = (tail.0 + dist.0.clamp(-1, 1), tail.1+ dist.1.clamp(-1, 1));
-                visited.insert(tail);
-                // } else if dist_sqr == 4{
-                // tail = (tail.0 + dist.0, tail.1- dist.1);
-                //     visited.insert(tail);
+                if dist_sqr == 5 || dist_sqr == 4 {
+                    tail = (tail.0 + dist.0.clamp(-1, 1), tail.1 + dist.1.clamp(-1, 1));
+                    visited.insert(tail);
+                    // } else if dist_sqr == 4{
+                    // tail = (tail.0 + dist.0, tail.1- dist.1);
+                    //     visited.insert(tail);
                 }
             }
 
@@ -50,9 +50,8 @@ fn main() {
 
     println!("{}", visited.len());
 
-    
     let mut visited: HashSet<(i32, i32)> = HashSet::new();
-    let mut knot_vec = vec![(0,0); 10]; // indx 1-9 act as their own head
+    let mut knot_vec = vec![(0, 0); 10]; // indx 1-9 act as their own head
     visited.insert(knot_vec[9]);
     for m in moves {
         for _ in 0..m.1 {
@@ -62,20 +61,20 @@ fn main() {
                 if dist != (0, 0) {
                     let dist_sqr = dist.0.pow(2) + dist.1.pow(2);
                     if dist_sqr >= 4 {
-                        knot_vec[i] = (knot_vec[i].0 + dist.0.clamp(-1, 1), knot_vec[i].1 + dist.1.clamp(-1, 1));
+                        knot_vec[i] = (
+                            knot_vec[i].0 + dist.0.clamp(-1, 1),
+                            knot_vec[i].1 + dist.1.clamp(-1, 1),
+                        );
                         visited.insert(knot_vec[9]);
                     }
                 }
 
-                knot_vec[i-1] = new_head;
+                knot_vec[i - 1] = new_head;
                 new_head = knot_vec[i]
             }
             // println!("{:?}", knot_vec);
-            
         }
     }
 
     println!("{}", visited.len());
-
-
 }
