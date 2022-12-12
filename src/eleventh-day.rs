@@ -5,181 +5,44 @@ use rug::{Assign, Integer};
 const TEST_STR: &str = include_str!("../test_data/test.txt");
 const PROMPT: &str = include_str!("../test_data/eleventh_day.txt");
 
-#[derive(Debug, Clone)]
-struct Monkey {
-    items: Vec<u128>,
-    operation: Vec<String>,
-    test: u128,
-    destination: [u16; 2],
-    inspections: u32,
-}
-#[derive(Debug, Clone)]
-struct BigMonkey {
-    items: Vec<usize>,
-    operation: Vec<String>,
-    test: usize,
-    destination: [u16; 2],
-    inspections: u32,
-}
+#[derive(Clone, Copy, Debug)]
+enum Op { Add(u64), Mul(u64), Special }
 
-fn parse_data(input: &str) -> Monkey {
-    let mut l = input.trim().lines().collect_vec();
-    l.reverse();
-    l.pop().unwrap();
-    let items = l
-        .pop()
-        .unwrap()
-        .trim()
-        .split_once(":")
-        .unwrap()
-        .1
-        .split(",")
-        .map(|i| i.trim().parse::<u128>().unwrap())
-        .collect_vec();
-    let operation = l
-        .pop()
-        .unwrap()
-        .trim()
-        .split_once(":")
-        .unwrap()
-        .1
-        .split_once("=")
-        .unwrap()
-        .1
-        .split_whitespace()
-        .map(|i| i.trim().to_string())
-        .collect_vec();
-    let test = l
-        .pop()
-        .unwrap()
-        .trim()
-        .split_whitespace()
-        .last()
-        .unwrap()
-        .trim()
-        .parse::<u128>()
-        .unwrap();
-    let if_true = l
-        .pop()
-        .unwrap()
-        .trim()
-        .split_whitespace()
-        .last()
-        .unwrap()
-        .trim()
-        .parse::<u16>()
-        .unwrap();
-    let if_false = l
-        .pop()
-        .unwrap()
-        .trim()
-        .split_whitespace()
-        .last()
-        .unwrap()
-        .trim()
-        .parse::<u16>()
-        .unwrap();
-    let destination = [if_true, if_false];
-    Monkey {
-        items,
-        operation,
-        test,
-        destination,
-        inspections: 0,
+fn simulate(mut monkies: Vec<(Vec<u64>, Op, u64, usize, usize)>, rounds: usize, f: impl Fn(u64) -> u64) -> usize {
+  let mut inspections = vec![0; monkies.len()];
+  for _ in 0..rounds {
+    for i in 0..monkies.len() {
+      let (items, op, div, m1, m2) = monkies[i].clone();
+      for item in items {
+        let worry = match op {
+          Op::Add(v) => f(item + v),
+          Op::Mul(v) => f(item * v),
+          Op::Special => f(item * item),
+        };
+        monkies[if worry % div == 0 {m1} else {m2}].0.push(worry);
+      }
+      inspections[i] += monkies[i].0.len();
+      monkies[i].0.clear();
     }
-}
-
-fn part1(monkes: Vec<Monkey>) -> Vec<Monkey> {
-    let mut monkeys = monkes.clone();
-        for m in 0..monkeys.len() {
-            monkeys[m].items.reverse();
-            while let Some(item) = monkeys[m].items.pop()  {
-                let monk = monkeys[m].clone(); 
-                let mut temp = item.clone();
-                let rhs = match monk.operation[2].parse::<u128>() {
-                    Ok(i) => i,
-                    Err(_) => temp,
-                };
-                if monk.operation[1] == "*" {
-                    temp *= rhs;
-                } else if monk.operation[1] == "+" {
-                    temp += rhs;
-                }
-                temp = temp / 3;
-                if temp % monk.test == 0 {
-                    monkeys[monk.destination[0] as usize].items.push(temp);
-
-                } else {
-                    monkeys[monk.destination[1] as usize].items.push(temp);
-                }
-                monkeys[m].inspections += 1;
-                
-            }
-    }
-    // println!("{:?}", monkeys);
-    monkeys
-}
-
-fn part2(monkes: Vec<BigMonkey>) -> Vec<BigMonkey> {
-    let mut monkeys = monkes.clone();
-    for m in 0..monkeys.len() {
-        monkeys[m].items.reverse();
-        while let Some(item) = monkeys[m].items.pop() {
-            let monk = monkeys[m];
-            let mut temp = item;
-            let rhs = match monk.operation[2].parse::<Integer>() {
-                Ok(i) => i,
-                Err(_) => temp.clone(),
-            };
-            if monk.operation[1] == "*" {
-                temp *= rhs;
-            } else if monk.operation[1] == "+" {
-                temp += rhs;
-            }
-            if temp.clone() % monk.test == 0 {
-                monkeys[monk.destination[0] as usize].items.push(temp);
-
-            } else {
-                monkeys[monk.destination[1] as usize].items.push(temp);
-            }
-            monkeys[m].inspections += 1;
-        }
-    }
-    monkeys
+  }
+  inspections.sort_by_key(|&x| -(x as isize));
+  inspections[0] * inspections[1]
 }
 
 fn main() {
-    // let instructions = parse_data(TEST_STR);
-    let monkes = PROMPT.trim().split("\n\n").map(parse_data).collect_vec();
-    let mut monkeys = monkes.clone();
-    for _ in 0..20 {
-        monkeys = part1(monkeys.clone());
-    }
-    for m in monkeys.iter() {
-        println!("{:?}", m);
-    }
-    let mut max = monkeys.iter().sorted_by(|m1, m2| Ord::cmp(&m1.inspections, &m2.inspections)).collect_vec();
-    max.reverse();
-    let ans = max[0].inspections * max[1].inspections;
-    println!("{}", ans);
-    
-    let mut monkeys = monkes.iter().map(|m| BigMonkey {
-        items: m.items.iter().map(|i| Integer::from(*i)).collect_vec(),
-        operation: m.operation.clone(),
-        test: Integer::from(m.test),
-        destination: m.destination,
-        inspections: m.inspections,
-    }).collect_vec();
-    for i in 0..10000 {
-        // println!("iteration: {}", i);
-        monkeys = part2(monkeys.clone());
-    }
-    for m in monkeys.iter() {
-        println!("{:?}", m);
-    }
-    let mut max = monkeys.iter().sorted_by(|m1, m2| Ord::cmp(&m1.inspections, &m2.inspections)).collect_vec();
-    max.reverse();
-    let ans = max[0].inspections * max[1].inspections;
-    println!("{}", ans);
-
+  let monkies = PROMPT.split("\n\n").map(|m| {
+    let (l1, l2, l3, l4, l5) = m.lines().skip(1).map(|l| l.trim()).collect_tuple().unwrap();
+    (
+      l1["Starting items: ".len()..].split(", ").map(|x| x.parse().unwrap()).collect(),
+      l2["Operation: new = old * ".len()..].parse().map(|v| if l2.contains('+') {Op::Add(v)} else {Op::Mul(v)}).unwrap_or(Op::Special),
+      l3["Test: divisible by ".len()..].parse().unwrap(),
+      l4["If true: throw to monkey ".len()..].parse().unwrap(),
+      l5["If false: throw to monkey ".len()..].parse().unwrap(),
+    )
+  }).collect::<Vec<_>>();
+  let modulus = monkies.iter().map(|m| m.2).product::<u64>();
+  let p1 = simulate(monkies.clone(), 20, |x| x / 3);
+  let p2 = simulate(monkies, 10000, |x| x % modulus);
+  println!("Part 1: {}", p1);
+  println!("Part 2: {}", p2);
 }
