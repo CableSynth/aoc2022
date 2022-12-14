@@ -51,6 +51,9 @@ path = "src/eleventh-day.rs"
 [[bin]]
 name = "twelfth-day"
 path = "src/twelfth-day.rs"
+[[bin]]
+name = "thirteenth-day"
+path = "src/thirteenth-day.rs"
 [dependencies]
 grid = "0.9.0"
 itertools = "0.10.5"
