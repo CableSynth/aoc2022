@@ -1,5 +1,5 @@
-use std::collections::VecDeque;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 
 use itertools::Itertools;
 
@@ -33,20 +33,19 @@ impl Grid {
             if self.grid[y + 1][x] <= self.grid[y][x] + 1 {
                 neighbors.push((x, y + 1));
             }
-            
         }
-        if y!=0 {
-            if self.grid[y - 1][x]<= self.grid[y][x]+ 1 {
+        if y != 0 {
+            if self.grid[y - 1][x] <= self.grid[y][x] + 1 {
                 neighbors.push((x, y - 1));
             }
         }
         if self.inbounds(x + 1, y) {
-            if self.grid[y][x + 1]<= self.grid[y][x]+ 1 {
+            if self.grid[y][x + 1] <= self.grid[y][x] + 1 {
                 neighbors.push((x + 1, y));
             }
         }
-        if x!= 0 {
-            if self.grid[y][x - 1]<= self.grid[y][x]+ 1 {
+        if x != 0 {
+            if self.grid[y][x - 1] <= self.grid[y][x] + 1 {
                 neighbors.push((x - 1, y));
             }
         }
@@ -56,8 +55,15 @@ impl Grid {
     }
 }
 
-fn a_star(grid: Grid, start: (usize, usize), end: (usize, usize)) -> (HashMap<(usize, usize), Option<(usize, usize)>>, HashMap<(usize, usize), u32>) {
-    let mut frontier:VecDeque<(i64, (usize, usize))>  = VecDeque::new();
+fn a_star(
+    grid: Grid,
+    start: (usize, usize),
+    end: (usize, usize),
+) -> (
+    HashMap<(usize, usize), Option<(usize, usize)>>,
+    HashMap<(usize, usize), u32>,
+) {
+    let mut frontier: VecDeque<(i64, (usize, usize))> = VecDeque::new();
     frontier.push_back((0, start));
     let mut came_from: HashMap<(usize, usize), Option<(usize, usize)>> = HashMap::new();
     let mut cost_so_far: HashMap<(usize, usize), u32> = HashMap::new();
@@ -70,22 +76,27 @@ fn a_star(grid: Grid, start: (usize, usize), end: (usize, usize)) -> (HashMap<(u
         if current.1 == end {
             break;
         }
-        for next in grid.neighbors(current.1.0, current.1.1) {
+        for next in grid.neighbors(current.1 .0, current.1 .1) {
             let new_cost = cost_so_far[&current.1] + 1;
             if !cost_so_far.contains_key(&next) || new_cost < cost_so_far[&next] {
                 cost_so_far.insert(next, new_cost);
-                let priority = new_cost as i64 + (next.0 as i64 - end.0 as i64).abs() + (next.1 as i64 - end.1 as i64).abs();
+                let priority = new_cost as i64
+                    + (next.0 as i64 - end.0 as i64).abs()
+                    + (next.1 as i64 - end.1 as i64).abs();
                 frontier.push_back((priority, next));
                 came_from.insert(next, Some(current.1));
             }
         }
-            
     }
 
     return (came_from, cost_so_far);
 }
 
-fn reconstruct_path(came_from: HashMap<(usize, usize), Option<(usize, usize)>>, start: (usize, usize), end: (usize, usize)) -> Option<Vec<(usize, usize)>> {
+fn reconstruct_path(
+    came_from: HashMap<(usize, usize), Option<(usize, usize)>>,
+    start: (usize, usize),
+    end: (usize, usize),
+) -> Option<Vec<(usize, usize)>> {
     let mut current = end;
     let mut path: Vec<(usize, usize)> = Vec::new();
     while current != start {
@@ -95,7 +106,6 @@ fn reconstruct_path(came_from: HashMap<(usize, usize), Option<(usize, usize)>>, 
         } else {
             return None;
         }
-
     }
     path.push(start);
     path.reverse();
@@ -128,7 +138,7 @@ fn main() {
                             starts.push((x, y));
                         }
                         c as u32 - 97
-                    },
+                    }
                 })
                 .collect_vec()
         })
@@ -139,8 +149,8 @@ fn main() {
     let (came_from, cost_so_far) = a_star(Grid::new(grid.clone()), start, end);
     // dbg!(came_from.clone());
     let path = reconstruct_path(came_from, start, end);
-    if path.is_some(){
-        println!("{:?}", path.unwrap().len()-1);
+    if path.is_some() {
+        println!("{:?}", path.unwrap().len() - 1);
     }
     let results = starts
         .iter()
@@ -148,8 +158,8 @@ fn main() {
             let (came_from, cost_so_far) = a_star(Grid::new(grid.clone()), *start, end);
             let path = reconstruct_path(came_from, *start, end);
             path
-        }).collect_vec();
+        })
+        .collect_vec();
     let res_len = results.iter().map(|x| x.len()).min();
-    println!("{:?}", res_len.unwrap()-1);
-    
+    println!("{:?}", res_len.unwrap() - 1);
 }
